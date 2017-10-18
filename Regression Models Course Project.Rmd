@@ -1,0 +1,58 @@
+---
+title: "Regression Models Course Project"
+author: "John B Cheadle"
+date: "October 17, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive Summary
+Q: 	8. Did the report include an executive summary?
+
+
+This report explores the relationship between between a set of variables and miles per gallon (MPG) using the mtcars data set.  After some exploratory data analysis, I will use linear models to answer two primary questions:
+1. Is an automatic or manual transmission better for MPG?
+
+2. What is the quantifiable difference between automatic and manual transmissions?
+
+Brief Results
+
+## Exploring the mtcars data set
+- Did the student do some exploratory data analyses?
+
+```{r mtcars_help, echo=FALSE}
+?mtcars
+data(mtcars)
+head(mtcars)
+sapply(mtcars, class)
+```
+Here we get a sense of the mtcars data set.  We learn that 'am' is one of the main variables we want to regress on (0 = automatic, 1 = manual).
+
+```{r mtcars_plot, echo=TRUE}
+boxplot(mpg~am,data=mtcars, 
+        main="Car Milage Data",
+        xlab="Transmission (0=auto, 1=manual)",
+        ylab="Miles Per Gallon (MPG)")
+```
+It appears from the relative means of MPG for automatic and manaul transmission that these two variables are correlated.  In the following sections, we fit a linear model using lm() with the outcome 'mpg' and the primary regressor 'am' from the mtcars data set.
+
+## Model Fitting
+- Did the student fit multiple models and detail their strategy for model selection?
+
+## Residual Plot & Diagnostics
+- Did the student do a residual plot and some diagnostics?
+
+## Interpretation of Coefficients
+- Did the student interpret the coefficients correctly?
+
+## Conclusions
+- Did the student answer the questions of interest or detail why the question(s) is (are) not answerable?
+
+- Did the student quantify the uncertainty in their conclusions and/or perform an inference correctly?
+
+## Appendix
