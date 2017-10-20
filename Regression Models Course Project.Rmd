@@ -3,27 +3,28 @@ title: "Regression Models Course Project"
 author: "John B Cheadle"
 date: "October 17, 2017"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+require(car)
 ```
 
-## Executive Summary
-Q: 	8. Did the report include an executive summary?
+# Executive Summary
 
+This report explores the relationship between between a set of variables and miles per gallon (MPG) using the mtcars data set. Specifically, the repot seeks to answer two questions:
 
-This report explores the relationship between between a set of variables and miles per gallon (MPG) using the mtcars data set.  After some exploratory data analysis, I will use linear models to answer two primary questions:
 1. Is an automatic or manual transmission better for MPG?
 
 2. What is the quantifiable difference between automatic and manual transmissions?
 
-Brief Results
+The initial linear model fitted with MPG as the otucome and automatic/manual as the predictor, **lm(mpg ~ factor(am), data=mtcars)**, shows an increase of 7.425 mpg switching from automatic to manual transmission.  However, there is a hidden variable, weight(wt), which is highly correlated with the am variable.  When we add wt to our linear model, **lm(mpg ~ factor(am) + wt, data=mtcars)**, we show a *decrease* of .024 mpg switching from automatic to manaul transmission, an example of Simpson's paradox. Therefore, we conclude that when weight is included as a regressor in our model, automatic/manual transmission is not a significant predictor for mpg in our mtcars data set.
 
-## Exploring the mtcars data set
-- Did the student do some exploratory data analyses?
+# Exploring the mtcars data set
+To start, we look at some aspects of the mtcars data set.
 
 ```{r mtcars_help, echo=FALSE}
 ?mtcars
@@ -33,26 +34,88 @@ sapply(mtcars, class)
 ```
 Here we get a sense of the mtcars data set.  We learn that 'am' is one of the main variables we want to regress on (0 = automatic, 1 = manual).
 
-```{r mtcars_plot, echo=TRUE}
+```{r mtcars_plot, echo=FALSE}
 boxplot(mpg~am,data=mtcars, 
         main="Car Milage Data",
         xlab="Transmission (0=auto, 1=manual)",
         ylab="Miles Per Gallon (MPG)")
 ```
+
 It appears from the relative means of MPG for automatic and manaul transmission that these two variables are correlated.  In the following sections, we fit a linear model using lm() with the outcome 'mpg' and the primary regressor 'am' from the mtcars data set.
 
-## Model Fitting
-- Did the student fit multiple models and detail their strategy for model selection?
+# Model Fitting
+The initial model fitted used the variable am as the regressor to the mpg outcome.
 
-## Residual Plot & Diagnostics
-- Did the student do a residual plot and some diagnostics?
+```{r modelfit1, echo=TRUE}
+fit1 <- lm(mpg ~ factor(am), data=mtcars)
+summary(fit1)$coef
+```
+Here the intercept is the mean mpg for am value of 0 (automatic), whereas factor(am)1 is the increase in mpg switching to manual, which is 7.245 (a significant increase).  **So we are gaining 7.245 mpg from switching from automatic to manual, all other variables held constant.**
 
-## Interpretation of Coefficients
-- Did the student interpret the coefficients correctly?
+# Residual Plot & Diagnostics
+To probe that the variation we see in our fit is not systemic, we investigate residuals.  Typically, to probe problems in the model, we plot residuals vs. fitted values.
+
+Clearly, there is something systemic **(Figure A1, Appendix)** that is causing variation, hinting at a hidden variable.
+
+We know intuitively that other factors influence a car's mpg, such as weight, # of cylinders, etc.  We explore the effect of weight on mpg in an exploratory plot, denoting whether the car is automatic or manual:
+
+```{r mtcars_ggplot, echo=TRUE}
+g = ggplot(data=mtcars, aes(wt,mpg))
+g = g + geom_point(size=4, alpha=1/2,
+                   aes(color=factor(am)))
+g = g + ggtitle('Investigating mtcars Variables')
+print(g)
+```
+
+Here things become more clear; it appears that the heavier cars are almost all automatic (0, pink), whereas the lighter cars are almost all manual transmission (1, blue).
+
+# Model Fitting, cont.
+In light of this new information, we fit more models and assess their fit using analysis of variance (ANOVA).
+
+```{r modelfit2, echo=TRUE}
+fit2 <- lm(mpg ~ factor(am) + wt, data=mtcars)
+fit3 <- lm(mpg ~ factor(am) + wt + cyl, data=mtcars)
+fit4 <- lm(mpg ~ ., data=mtcars)
+
+anova(fit1, fit2, fit3, fit4)
+```
+From the p-values it appears that other variables are necessary to include (fit2), but only up to a point; if we include all of them, our p-value drops.  Here we decide to go with fit2, the model that includes the variable wt.
+
+To investigate coefficients of this new model, we re-run the summary:
+
+```{r modelfit_wt, echo=TRUE}
+summary(fit2)$coef
+```
+We notice that our factor(am)1 reversed sign and is not a significant predictor of mpg when weight is included as a regressor - This is an example of Simpson's paradox.  We reinterpret our coefficients as such: when we include am and wt as regressors, a switch from automatic to manual transmission *decreases* mpg by 0.24, whereas a 1000 lb increase in car weight decreases our mpg by 5.35.
+
 
 ## Conclusions
-- Did the student answer the questions of interest or detail why the question(s) is (are) not answerable?
+Based on p-values from our ANOVA, we chose the **Model 2: mpg ~ factor(am) + wt** as the most appropriate fit.  In this model, we see a 0.24 *decrease* in mpg switching from automatic to manual.  We also see a 5.35 *decrease* in mpg per 1000lb of car weight.
 
-- Did the student quantify the uncertainty in their conclusions and/or perform an inference correctly?
+To probe this model, we again plot the residuals vs the fitted (yhat) values.  As seen in Appendix figure A2, the scatterplot simply looks like a cloud of data points, suggesting an unbiased variation.
+
+We also quantify the uncertainty of our chosen model.
+
+```{r uncertainty, echo=TRUE}
+sumCoef <- summary(fit2)$coefficients
+sumCoef[2,1] + c(-1,1)*qt(.975,df=fit2$df) * sumCoef[2,2]
+sumCoef[3,1] + c(-1,1)*qt(.975,df=fit2$df) * sumCoef[3,2]
+```
+
+The results: for our 1st coefficient 'am', a switch from automatic to manual results in a [-3.18 to 3.14] increase in mpg with 95% certainty.  This passes through 0 and is quite even on both sides, therefore insignificant.  For our 2nd coefficient 'wt', an increase in 1000lb of car weight is going to result in a [-6.96 to -3.74] increase in mpg, with 95% certainty.  This suggests am is insignificant, where increase in weight significantly reduces mpg.
+
+In conclusion, our model suggests that manual/automatic transmission has *no effect* on mpg; rather, **weight is the primary predictor of mpg outcome.**
 
 ## Appendix
+```{r Figure_A1, echo=TRUE}
+yhat <- predict(fit1)
+e <- resid(fit1)
+plot(yhat, e, main = "Figure A1, Residuals vs. Fitted")
+```
+
+```{r Figure_A2, echo=TRUE}
+yhat2 <- predict(fit2)
+e2 <- resid(fit2)
+plot(yhat2, e2, main = "Figure A2, Residuals vs. Fitted")
+```
+
